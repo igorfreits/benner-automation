@@ -1,0 +1,44 @@
+
+Public Sub MAIN
+
+	Dim QRY_VIP_KONCEPT As Object
+	Set QRY_VIP_KONCEPT = NewQuery
+	QRY_VIP_KONCEPT.Active = False
+	QRY_VIP_KONCEPT.Clear
+
+	QRY_VIP_KONCEPT.Add("SELECT PNR.HANDLE AS HANDLE_PNR,ACC.HANDLE AS HANDLE_ACC, PNR.LOCALIZADORA,PNR.DATAINCLUSAO, CLI.NOME AS CLIENTE,ACC.K9_VIP,CNL.DESCRICAO " + _
+                    "FROM VM_PNRS PNR " + _
+                    "LEFT JOIN VM_PNRACCOUNTINGS ACC ON ACC.PNR = PNR.HANDLE " + _
+                    "LEFT JOIN GN_PESSOAS CLI ON CLI.HANDLE = PNR.CLIENTE " + _
+                    "LEFT JOIN BB_CANALVENDA CNL ON CNL.HANDLE = ACC.CANALVENDA " + _
+                    "WHERE CAST(PNR.DATAINCLUSAO AS DATE) = CAST(GETDATE() - 3 AS DATE) " + _
+                    "AND CNL.DESCRICAO = 'POSTO KONCEPT'")
+
+	QRY_VIP_KONCEPT.Active = True
+
+	While Not QRY_VIP_KONCEPT.EOF()
+
+		Dim UPT_VIP As Object
+		Set UPT_VIP = NewQuery
+
+		UPT_VIP.Active = False
+		UPT_VIP.Clear
+
+		UPT_VIP.Add("UPDATE VM_PNRACCOUNTINGS SET K9_VIP = 91 WHERE HANDLE ="+ QRY_VIP_KONCEPT.FieldByName("HANDLE_ACC").AsInteger+"")
+
+		UPT_VIP.ExecSQL
+
+                    Dim UPT_REPROCESSAMENTO As Object
+                    Set UPT_REPROCESSAMENTO = NewQuery
+                    UPT_REPROCESSAMENTO.Active = False
+                    UPT_REPROCESSAMENTO.Clear
+
+                    UPT_REPROCESSAMENTO.Add("UPDATE VM_PNRS SET SITUACAO=1, CONCLUIDO='S', EXPORTADO='N', AGUARDANDOEMISSAO='N' WHERE HANDLE ="+ QRY_VIP_KONCEPT.FieldByName("HANDLE_PNR").AsInteger+"")
+
+                    UPT_REPROCESSAMENTO.ExecSQL
+
+                    QRY_VIP_KONCEPT.Next
+
+
+	Wend
+End Sub
